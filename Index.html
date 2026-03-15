@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sítio Pedra Grande - Controlo de Perdas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Ícones Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            height: 100vh; 
+            overflow: hidden; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f8fafc;
+        }
+
+        .dashboard-container {
+            display: flex;
+            height: calc(100vh - 70px);
+            width: 100%;
+        }
+
+        .panel-form {
+            width: 400px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            overflow-y: auto;
+            padding: 1.5rem;
+            z-index: 5;
+        }
+
+        .panel-view {
+            flex: 1;
+            background: #f1f5f9;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        /* Estilo dos Cards Profissionais */
+        .record-card {
+            background: white;
+            border-radius: 24px;
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+            border: 1px solid #f1f5f9;
+            position: relative;
+        }
+
+        .record-card:hover { transform: translateY(-2px); }
+
+        .perda-badge {
+            background: #fdf2f2;
+            border-radius: 16px;
+            padding: 1rem;
+            min-width: 100px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .logo-container {
+            width: 54px;
+            height: 54px;
+            background: white;
+            border-radius: 50%;
+            padding: 2px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .input-group { position: relative; }
+        .input-icon { position: absolute; left: 12px; top: 38px; color: #94a3b8; width: 16px; height: 16px; }
+        .input-with-icon { padding-left: 36px !important; }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <header class="bg-[#064e3b] text-white px-8 h-[70px] flex items-center justify-between shadow-lg relative z-20">
+        <div class="flex items-center gap-4">
+            <div class="logo-container">
+                <img src="image_620438.png" 
+                     alt="Sítio Pedra Grande" 
+                     class="w-full h-full object-contain"
+                     onerror="this.src='https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/sprout.svg'; this.style.filter='invert(1)'">
+            </div>
+            <div>
+                <h1 class="font-black text-xl leading-none tracking-tight">SÍTIO PEDRA GRANDE</h1>
+                <p class="text-[10px] text-emerald-300 font-bold tracking-[0.2em] uppercase">Gestão de Perdas de Cultivo</p>
+            </div>
+        </div>
+        
+        <div class="flex gap-3">
+            <button onclick="exportarRelatorio('png')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-md">
+                <i data-lucide="camera" class="w-4 h-4"></i> Captura
+            </button>
+            <button onclick="exportarRelatorio('pdf')" class="bg-red-600 hover:bg-red-500 text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-md">
+                <i data-lucide="file-down" class="w-4 h-4"></i> PDF
+            </button>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        
+        <!-- PAINEL LATERAL DE REGISTO -->
+        <aside class="panel-form">
+            <h2 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                <i data-lucide="plus-circle" class="text-emerald-600"></i> Novo Registo
+            </h2>
+
+            <form id="perdaForm" onsubmit="registrarPerda(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="input-group">
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Data</label>
+                        <i data-lucide="calendar" class="input-icon"></i>
+                        <input type="date" id="dataPerda" required class="input-with-icon w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="input-group">
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Bloco</label>
+                        <i data-lucide="map" class="input-icon"></i>
+                        <input type="text" id="bloco" placeholder="Ex: B-01" required class="input-with-icon w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">Variedade</label>
+                    <input type="text" id="variedade" placeholder="Nome da planta" required class="w-full p-2.5 border border-slate-200 rounded-xl text-sm outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="input-group">
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Total Plantado</label>
+                        <i data-lucide="list" class="input-icon"></i>
+                        <input type="number" id="total" placeholder="0" required oninput="calcularSaldo()" class="input-with-icon w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm outline-none">
+                    </div>
+                    <div class="input-group">
+                        <label class="text-[10px] font-black text-red-500 uppercase">Perda</label>
+                        <i data-lucide="alert-circle" class="input-icon text-red-400"></i>
+                        <input type="number" id="perda" placeholder="0" required oninput="calcularSaldo()" class="input-with-icon w-full mt-1 p-2.5 border border-red-100 bg-red-50 rounded-xl text-sm font-bold text-red-600 outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="input-group">
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Ciclo (Dias)</label>
+                        <i data-lucide="clock" class="input-icon"></i>
+                        <input type="number" id="ciclo" placeholder="Ex: 3" required class="input-with-icon w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm outline-none">
+                    </div>
+                    <div class="input-group">
+                        <label class="text-[10px] font-black text-blue-500 uppercase">Saldo</label>
+                        <i data-lucide="activity" class="input-icon text-blue-400"></i>
+                        <input type="number" id="saldo" readonly class="input-with-icon w-full mt-1 p-2.5 border border-blue-100 bg-blue-50 rounded-xl text-sm font-bold text-blue-700 outline-none">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label class="text-[10px] font-black text-slate-400 uppercase">Causa da Perda</label>
+                    <i data-lucide="help-circle" class="input-icon"></i>
+                    <select id="motivo" required class="input-with-icon w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm bg-white outline-none cursor-pointer">
+                        <option value="Qualidade da Muda">Qualidade da Muda</option>
+                        <option value="Dano de Transporte">Dano de Transporte</option>
+                        <option value="Erro de Manuseio">Erro de Manuseio</option>
+                        <option value="Pragas / Doenças">Pragas / Doenças</option>
+                        <option value="Condições Climáticas">Condições Climáticas</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full bg-[#064e3b] hover:bg-[#065f46] text-white font-black py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer">
+                    GUARDAR REGISTO
+                </button>
+            </form>
+        </aside>
+
+        <!-- DASHBOARD PRINCIPAL -->
+        <section class="panel-view">
+            <div class="max-w-4xl mx-auto" id="export-area">
+                
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tight">Resultados Gerais</h2>
+                        <p class="text-sm text-slate-500">Análise acumulada do Sítio Pedra Grande</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Estado Atual</span>
+                        <div id="data-label" class="text-lg font-bold text-slate-700">--/--/----</div>
+                    </div>
+                </div>
+
+                <!-- Estatísticas de Topo -->
+                <div class="grid grid-cols-3 gap-6 mb-12">
+                    <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200 flex flex-col items-center">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Mudas Perdidas</p>
+                        <p id="stat-perdas" class="text-4xl font-black text-red-600">0</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200 flex flex-col items-center">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Saldo em Campo</p>
+                        <p id="stat-saldo" class="text-4xl font-black text-emerald-800">0</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200 flex flex-col items-center">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Taxa de Perda</p>
+                        <p id="stat-taxa" class="text-4xl font-black text-blue-600">0%</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Histórico de Registos</h3>
+                    <span id="contador-itens" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black">0 REGISTOS</span>
+                </div>
+
+                <div id="listaRegistros" class="space-y-4">
+                    <!-- Registos inseridos aqui -->
+                </div>
+
+                <div id="msgVazia" class="bg-white/50 rounded-[40px] border-4 border-dashed border-slate-200 py-20 text-center text-slate-300">
+                    <i data-lucide="database" class="w-12 h-12 mx-auto mb-4 opacity-20"></i>
+                    <p class="font-bold text-sm">NENHUM DADO REGISTADO</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const DB_KEY = 'sitio_pedra_grande_db';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            const hoje = new Date();
+            document.getElementById('dataPerda').valueAsDate = hoje;
+            document.getElementById('data-label').innerText = hoje.toLocaleDateString('pt-PT');
+            renderizar();
+        });
+
+        function calcularSaldo() {
+            const t = parseInt(document.getElementById('total').value) || 0;
+            const p = parseInt(document.getElementById('perda').value) || 0;
+            document.getElementById('saldo').value = Math.max(0, t - p);
+        }
+
+        function registrarPerda(e) {
+            e.preventDefault();
+            const t = parseInt(document.getElementById('total').value) || 0;
+            const p = parseInt(document.getElementById('perda').value) || 0;
+            
+            const novo = {
+                id: Date.now(),
+                data: document.getElementById('dataPerda').value,
+                bloco: document.getElementById('bloco').value,
+                variedade: document.getElementById('variedade').value,
+                total: t,
+                perda: p,
+                saldo: t - p,
+                taxa: t > 0 ? ((p / t) * 100).toFixed(1) : 0,
+                ciclo: document.getElementById('ciclo').value,
+                motivo: document.getElementById('motivo').value
+            };
+
+            const db = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+            db.unshift(novo);
+            localStorage.setItem(DB_KEY, JSON.stringify(db));
+            
+            e.target.reset();
+            document.getElementById('dataPerda').valueAsDate = new Date();
+            renderizar();
+        }
+
+        function renderizar() {
+            const lista = document.getElementById('listaRegistros');
+            const msg = document.getElementById('msgVazia');
+            const db = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+            
+            document.getElementById('contador-itens').innerText = `${db.length} REGISTOS`;
+
+            if (db.length === 0) {
+                lista.innerHTML = '';
+                msg.classList.remove('hidden');
+                atualizarStats(0, 0, 0);
+                return;
+            }
+
+            msg.classList.add('hidden');
+            let sumPerda = 0, sumSaldo = 0, sumTotal = 0;
+
+            lista.innerHTML = db.map(reg => {
+                sumPerda += reg.perda;
+                sumSaldo += reg.saldo;
+                sumTotal += reg.total;
+
+                return `
+                    <div class="record-card">
+                        <div class="perda-badge">
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">PERDA</span>
+                            <span class="text-2xl font-black text-red-600 leading-none my-1">${reg.perda}</span>
+                            <span class="text-[11px] font-black text-red-400">${reg.taxa}%</span>
+                        </div>
+
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <span class="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-1 inline-block">${reg.variedade}</span>
+                                    <h4 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                                        <i data-lucide="box" class="w-4 h-4 text-slate-400"></i>
+                                        Bloco: ${reg.bloco}
+                                    </h4>
+                                </div>
+                                <div class="bg-slate-100 text-slate-500 text-[10px] font-bold px-3 py-1 rounded-full">
+                                    ${reg.data.split('-').reverse().join('/')}
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="bg-slate-50 p-2 rounded-xl">
+                                    <p class="text-[8px] font-black text-slate-400 uppercase">Saldo</p>
+                                    <p class="text-sm font-bold text-blue-700">${reg.saldo} mudas</p>
+                                </div>
+                                <div class="bg-slate-50 p-2 rounded-xl">
+                                    <p class="text-[8px] font-black text-slate-400 uppercase">Ciclo</p>
+                                    <p class="text-sm font-bold text-slate-600">${reg.ciclo} dias</p>
+                                </div>
+                                <div class="bg-slate-50 p-2 rounded-xl">
+                                    <p class="text-[8px] font-black text-slate-400 uppercase">Motivo</p>
+                                    <p class="text-sm font-bold text-slate-600 truncate">${reg.motivo}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="remover(${reg.id})" class="text-slate-200 hover:text-red-500 transition-colors bg-transparent border-none cursor-pointer p-2">
+                            <i data-lucide="trash-2" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+            
+            lucide.createIcons();
+            atualizarStats(sumPerda, sumSaldo, sumTotal);
+        }
+
+        function atualizarStats(p, s, t) {
+            document.getElementById('stat-perdas').innerText = p.toLocaleString();
+            document.getElementById('stat-saldo').innerText = s.toLocaleString();
+            const taxa = t > 0 ? ((p / t) * 100).toFixed(1) : 0;
+            document.getElementById('stat-taxa').innerText = `${taxa}%`;
+        }
+
+        function remover(id) {
+            if(!confirm('Deseja eliminar este registo?')) return;
+            let db = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+            db = db.filter(x => x.id !== id);
+            localStorage.setItem(DB_KEY, JSON.stringify(db));
+            renderizar();
+        }
+
+        async function exportarRelatorio(tipo) {
+            const area = document.getElementById('export-area');
+            const canvas = await html2canvas(area, { scale: 2, backgroundColor: '#f1f5f9' });
+            const imgData = canvas.toDataURL('image/png');
+            const name = `relatorio-sitio-pedra-grande-${new Date().getTime()}`;
+
+            if(tipo === 'png') {
+                const link = document.createElement('a');
+                link.download = `${name}.png`;
+                link.href = imgData;
+                link.click();
+            } else {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const width = pdf.internal.pageSize.getWidth();
+                const height = (canvas.height * width) / canvas.width;
+                pdf.addImage(imgData, 'PNG', 0, 10, width, height);
+                pdf.save(`${name}.pdf`);
+            }
+        }
+    </script>
+</body>
+</html>
