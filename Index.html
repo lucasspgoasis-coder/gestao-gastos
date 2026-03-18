@@ -1,392 +1,417 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sítio Pedra Grande - Controlo de Perdas</title>
+    <title>Fazenda Oasis - Gestão de Produção</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- Ícones Lucide -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap');
-        
-        body { 
-            font-family: 'Inter', sans-serif; 
-            height: 100vh; 
-            overflow: hidden; 
-            margin: 0; 
-            padding: 0; 
-            background-color: #f8fafc;
-        }
-
-        .dashboard-container {
-            display: flex;
-            height: calc(100vh - 70px);
-            width: 100%;
-        }
-
-        .panel-form {
-            width: 400px;
-            background: white;
-            border-right: 1px solid #e2e8f0;
-            overflow-y: auto;
-            padding: 1.5rem;
-            z-index: 5;
-        }
-
-        .panel-view {
-            flex: 1;
-            background: #f1f5f9;
-            overflow-y: auto;
-            padding: 2rem;
-        }
-
-        /* Estilo dos Cards Profissionais */
-        .record-card {
-            background: white;
-            border-radius: 24px;
-            padding: 1.25rem;
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s;
-            border: 1px solid #f1f5f9;
-            position: relative;
-        }
-
-        .record-card:hover { transform: translateY(-2px); }
-
-        .perda-badge {
-            background: #fdf2f2;
-            border-radius: 16px;
-            padding: 1rem;
-            min-width: 100px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .logo-container {
-            width: 54px;
-            height: 54px;
-            background: white;
-            border-radius: 50%;
-            padding: 2px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .input-group { position: relative; }
-        .input-icon { position: absolute; left: 12px; top: 38px; color: #94a3b8; width: 16px; height: 16px; }
-        .input-with-icon { padding-left: 36px !important; }
-
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        @media print { .no-print { display: none; } }
+        /* Esconder setas de input number */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
-<body>
+<body class="bg-slate-100">
+    <div id="root"></div>
 
-    <header class="bg-[#064e3b] text-white px-8 h-[70px] flex items-center justify-between shadow-lg relative z-20">
-        <div class="flex items-center gap-4">
-            <div class="logo-container">
-                <img src="image_620438.png" 
-                     alt="Sítio Pedra Grande" 
-                     class="w-full h-full object-contain"
-                     onerror="this.src='https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/sprout.svg'; this.style.filter='invert(1)'">
-            </div>
-            <div>
-                <h1 class="font-black text-xl leading-none tracking-tight">SÍTIO PEDRA GRANDE</h1>
-                <p class="text-[10px] text-emerald-300 font-bold tracking-[0.2em] uppercase">Gestão de Perdas de Cultivo</p>
-            </div>
-        </div>
-        
-        <div class="flex gap-3">
-            <button onclick="exportarRelatorio('png')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-md">
-                <i data-lucide="camera" class="w-4 h-4"></i> Captura
-            </button>
-            <button onclick="exportarRelatorio('pdf')" class="bg-red-600 hover:bg-red-500 text-white px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-md">
-                <i data-lucide="file-down" class="w-4 h-4"></i> PDF
-            </button>
-        </div>
-    </header>
+    <script type="text/babel">
+        const { useState, useRef, useEffect, useMemo } = React;
 
-    <main class="dashboard-container">
-        
-        <!-- PAINEL LATERAL DE REGISTO -->
-        <aside class="panel-form">
-            <h2 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <i data-lucide="plus-circle" class="text-emerald-600"></i> Novo Registo
-            </h2>
+        const Icon = ({ name, className }) => {
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, []);
+            return <i data-lucide={name} className={className}></i>;
+        };
 
-            <form id="perdaForm" onsubmit="registrarPerda(event)" class="space-y-4">
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="input-group">
-                        <label class="text-[10px] font-black text-slate-400 uppercase">Data</label>
-                        <i data-lucide="calendar" class="input-icon"></i>
-                        <input type="date" id="dataPerda" required class="input-with-icon w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500">
-                    </div>
-                    <div class="input-group">
-                        <label class="text-[10px] font-black text-slate-400 uppercase">Bloco</label>
-                        <i data-lucide="map" class="input-icon"></i>
-                        <input type="text" id="bloco" placeholder="Ex: B-01" required class="input-with-icon w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500">
-                    </div>
-                </div>
+        const App = () => {
+            const reportRef = useRef(null);
+            const [isExporting, setIsExporting] = useState(false);
+            const [formData, setFormData] = useState({
+                bloco: '', ciclo: '', diasCiclo: '', 
+                totalTransplantado: '', totalColhido: '',
+                totalKg: '', valorPorKg: '',
+                volumeTotal: '', ltrsPlanta: '', ltrsDia: '',
+                custosInsumos: [{ descricao: '', valor: '' }],
+                custosOperacionais: [{ categoria: '', valor: '' }]
+            });
 
-                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block">Variedade</label>
-                    <input type="text" id="variedade" placeholder="Nome da planta" required class="w-full p-2.5 border border-slate-200 rounded-xl text-sm outline-none">
-                </div>
+            const [relatorios, setRelatorios] = useState([]);
+            const categoriasOperacionais = ["Enel", "Folha", "MEI", "Avulso", "Capina", "Outros"];
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="input-group">
-                        <label class="text-[10px] font-black text-slate-400 uppercase">Total Plantado</label>
-                        <i data-lucide="list" class="input-icon"></i>
-                        <input type="number" id="total" placeholder="0" required oninput="calcularSaldo()" class="input-with-icon w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm outline-none">
-                    </div>
-                    <div class="input-group">
-                        <label class="text-[10px] font-black text-red-500 uppercase">Perda</label>
-                        <i data-lucide="alert-circle" class="input-icon text-red-400"></i>
-                        <input type="number" id="perda" placeholder="0" required oninput="calcularSaldo()" class="input-with-icon w-full mt-1 p-2.5 border border-red-100 bg-red-50 rounded-xl text-sm font-bold text-red-600 outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="input-group">
-                        <label class="text-[10px] font-black text-slate-400 uppercase">Ciclo (Dias)</label>
-                        <i data-lucide="clock" class="input-icon"></i>
-                        <input type="number" id="ciclo" placeholder="Ex: 3" required class="input-with-icon w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm outline-none">
-                    </div>
-                    <div class="input-group">
-                        <label class="text-[10px] font-black text-blue-500 uppercase">Saldo</label>
-                        <i data-lucide="activity" class="input-icon text-blue-400"></i>
-                        <input type="number" id="saldo" readonly class="input-with-icon w-full mt-1 p-2.5 border border-blue-100 bg-blue-50 rounded-xl text-sm font-bold text-blue-700 outline-none">
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label class="text-[10px] font-black text-slate-400 uppercase">Causa da Perda</label>
-                    <i data-lucide="help-circle" class="input-icon"></i>
-                    <select id="motivo" required class="input-with-icon w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm bg-white outline-none cursor-pointer">
-                        <option value="Qualidade da Muda">Qualidade da Muda</option>
-                        <option value="Dano de Transporte">Dano de Transporte</option>
-                        <option value="Erro de Manuseio">Erro de Manuseio</option>
-                        <option value="Pragas / Doenças">Pragas / Doenças</option>
-                        <option value="Condições Climáticas">Condições Climáticas</option>
-                    </select>
-                </div>
-
-                <button type="submit" class="w-full bg-[#064e3b] hover:bg-[#065f46] text-white font-black py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer">
-                    GUARDAR REGISTO
-                </button>
-            </form>
-        </aside>
-
-        <!-- DASHBOARD PRINCIPAL -->
-        <section class="panel-view">
-            <div class="max-w-4xl mx-auto" id="export-area">
-                
-                <div class="flex items-center justify-between mb-8">
-                    <div>
-                        <h2 class="text-3xl font-black text-slate-800 tracking-tight">Resultados Gerais</h2>
-                        <p class="text-sm text-slate-500">Análise acumulada do Sítio Pedra Grande</p>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Estado Atual</span>
-                        <div id="data-label" class="text-lg font-bold text-slate-700">--/--/----</div>
-                    </div>
-                </div>
-
-                <!-- Estatísticas de Topo -->
-                <div class="grid grid-cols-3 gap-6 mb-12">
-                    <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200 flex flex-col items-center">
-                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Mudas Perdidas</p>
-                        <p id="stat-perdas" class="text-4xl font-black text-red-600">0</p>
-                    </div>
-                    <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200 flex flex-col items-center">
-                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Saldo em Campo</p>
-                        <p id="stat-saldo" class="text-4xl font-black text-emerald-800">0</p>
-                    </div>
-                    <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-200 flex flex-col items-center">
-                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Taxa de Perda</p>
-                        <p id="stat-taxa" class="text-4xl font-black text-blue-600">0%</p>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Histórico de Registos</h3>
-                    <span id="contador-itens" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black">0 REGISTOS</span>
-                </div>
-
-                <div id="listaRegistros" class="space-y-4">
-                    <!-- Registos inseridos aqui -->
-                </div>
-
-                <div id="msgVazia" class="bg-white/50 rounded-[40px] border-4 border-dashed border-slate-200 py-20 text-center text-slate-300">
-                    <i data-lucide="database" class="w-12 h-12 mx-auto mb-4 opacity-20"></i>
-                    <p class="font-bold text-sm">NENHUM DADO REGISTADO</p>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <script>
-        const DB_KEY = 'sitio_pedra_grande_db';
-
-        document.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-            const hoje = new Date();
-            document.getElementById('dataPerda').valueAsDate = hoje;
-            document.getElementById('data-label').innerText = hoje.toLocaleDateString('pt-PT');
-            renderizar();
-        });
-
-        function calcularSaldo() {
-            const t = parseInt(document.getElementById('total').value) || 0;
-            const p = parseInt(document.getElementById('perda').value) || 0;
-            document.getElementById('saldo').value = Math.max(0, t - p);
-        }
-
-        function registrarPerda(e) {
-            e.preventDefault();
-            const t = parseInt(document.getElementById('total').value) || 0;
-            const p = parseInt(document.getElementById('perda').value) || 0;
-            
-            const novo = {
-                id: Date.now(),
-                data: document.getElementById('dataPerda').value,
-                bloco: document.getElementById('bloco').value,
-                variedade: document.getElementById('variedade').value,
-                total: t,
-                perda: p,
-                saldo: t - p,
-                taxa: t > 0 ? ((p / t) * 100).toFixed(1) : 0,
-                ciclo: document.getElementById('ciclo').value,
-                motivo: document.getElementById('motivo').value
+            // Função para formatar números com pontos de milhar enquanto digita
+            const formatInputNumber = (value) => {
+                if (!value) return "";
+                const cleanValue = value.toString().replace(/\D/g, "");
+                return new Intl.NumberFormat('pt-BR').format(cleanValue);
             };
 
-            const db = JSON.parse(localStorage.getItem(DB_KEY)) || [];
-            db.unshift(novo);
-            localStorage.setItem(DB_KEY, JSON.stringify(db));
-            
-            e.target.reset();
-            document.getElementById('dataPerda').valueAsDate = new Date();
-            renderizar();
-        }
+            // Converte string formatada de volta para número puro
+            const parseFormattedNumber = (formattedValue) => {
+                if (!formattedValue) return 0;
+                return parseFloat(formattedValue.toString().replace(/\./g, "").replace(",", "."));
+            };
 
-        function renderizar() {
-            const lista = document.getElementById('listaRegistros');
-            const msg = document.getElementById('msgVazia');
-            const db = JSON.parse(localStorage.getItem(DB_KEY)) || [];
-            
-            document.getElementById('contador-itens').innerText = `${db.length} REGISTOS`;
+            const mediaKgPlanta = useMemo(() => {
+                const kg = parseFormattedNumber(formData.totalKg);
+                const colhido = parseFormattedNumber(formData.totalColhido);
+                return colhido > 0 ? (kg / colhido).toFixed(3) : "0.000";
+            }, [formData.totalKg, formData.totalColhido]);
 
-            if (db.length === 0) {
-                lista.innerHTML = '';
-                msg.classList.remove('hidden');
-                atualizarStats(0, 0, 0);
-                return;
-            }
+            const handleChange = (e) => {
+                const { name, value, type } = e.target;
+                if (type === "text" && ["totalTransplantado", "totalColhido", "totalKg", "volumeTotal"].includes(name)) {
+                    setFormData(prev => ({ ...prev, [name]: formatInputNumber(value) }));
+                } else {
+                    setFormData(prev => ({ ...prev, [name]: value }));
+                }
+            };
 
-            msg.classList.add('hidden');
-            let sumPerda = 0, sumSaldo = 0, sumTotal = 0;
+            const handleCustoInsumoChange = (index, e) => {
+                const { name, value } = e.target;
+                const novos = [...formData.custosInsumos];
+                novos[index][name] = name === "valor" ? formatInputNumber(value) : value;
+                setFormData(prev => ({ ...prev, custosInsumos: novos }));
+            };
 
-            lista.innerHTML = db.map(reg => {
-                sumPerda += reg.perda;
-                sumSaldo += reg.saldo;
-                sumTotal += reg.total;
+            const handleOperacionalChange = (index, e) => {
+                const { name, value } = e.target;
+                const novos = [...formData.custosOperacionais];
+                novos[index][name] = name === "valor" ? formatInputNumber(value) : value;
+                setFormData(prev => ({ ...prev, custosOperacionais: novos }));
+            };
 
-                return `
-                    <div class="record-card">
-                        <div class="perda-badge">
-                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">PERDA</span>
-                            <span class="text-2xl font-black text-red-600 leading-none my-1">${reg.perda}</span>
-                            <span class="text-[11px] font-black text-red-400">${reg.taxa}%</span>
-                        </div>
+            const adicionarInsumo = () => setFormData(prev => ({ ...prev, custosInsumos: [...prev.custosInsumos, { descricao: '', valor: '' }] }));
+            const adicionarOperacional = () => setFormData(prev => ({ ...prev, custosOperacionais: [...prev.custosOperacionais, { categoria: '', valor: '' }] }));
+            const removerInsumo = (index) => setFormData(prev => ({ ...prev, custosInsumos: formData.custosInsumos.filter((_, i) => i !== index) }));
+            const removerOperacional = (index) => setFormData(prev => ({ ...prev, custosOperacionais: formData.custosOperacionais.filter((_, i) => i !== index) }));
 
-                        <div class="flex-1">
-                            <div class="flex justify-between items-start mb-2">
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const insumosValidos = formData.custosInsumos.filter(i => i.descricao && i.valor).map(i => ({...i, valor: parseFormattedNumber(i.valor)}));
+                const operacionaisValidos = formData.custosOperacionais.filter(o => o.categoria && o.valor).map(o => ({...o, valor: parseFormattedNumber(o.valor)}));
+                
+                const totalInsumos = insumosValidos.reduce((acc, curr) => acc + curr.valor, 0);
+                const totalOperacional = operacionaisValidos.reduce((acc, curr) => acc + curr.valor, 0);
+                const colhido = parseFormattedNumber(formData.totalColhido);
+                const kg = parseFormattedNumber(formData.totalKg);
+
+                const novoRelatorio = {
+                    ...formData,
+                    totalTransplantado: parseFormattedNumber(formData.totalTransplantado),
+                    totalColhido: colhido,
+                    totalKg: kg,
+                    valorPorKg: parseFloat(formData.valorPorKg) || 0,
+                    custosInsumos: insumosValidos,
+                    custosOperacionais: operacionaisValidos,
+                    id: Date.now(),
+                    mediaKg: colhido > 0 ? (kg / colhido).toFixed(3) : "0.000",
+                    totalInsumos,
+                    totalOperacional,
+                    totalGeral: totalInsumos + totalOperacional,
+                    dataRegistro: new Date().toLocaleDateString('pt-BR')
+                };
+
+                setRelatorios([novoRelatorio, ...relatorios]);
+                setFormData({
+                    bloco: '', ciclo: '', diasCiclo: '', totalTransplantado: '', totalColhido: '',
+                    totalKg: '', valorPorKg: '', volumeTotal: '', ltrsPlanta: '', ltrsDia: '',
+                    custosInsumos: [{ descricao: '', valor: '' }],
+                    custosOperacionais: [{ categoria: '', valor: '' }]
+                });
+            };
+
+            const exportAsImage = async () => {
+                setIsExporting(true);
+                setTimeout(async () => {
+                    const dataUrl = await window.htmlToImage.toJpeg(reportRef.current, { quality: 0.95, backgroundColor: '#f1f5f9' });
+                    const link = document.createElement('a');
+                    link.download = `Relatorio_Oasis_${new Date().getTime()}.jpeg`;
+                    link.href = dataUrl;
+                    link.click();
+                    setIsExporting(false);
+                }, 100);
+            };
+
+            const exportAsPDF = async () => {
+                setIsExporting(true);
+                setTimeout(async () => {
+                    const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true });
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                    pdf.save(`Relatorio_Oasis_${new Date().getTime()}.pdf`);
+                    setIsExporting(false);
+                }, 100);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col pb-10">
+                    <header className="bg-white shadow-sm border-b p-6 no-print">
+                        <div className="max-w-7xl mx-auto flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <img src="https://i.imgur.com/qsYPvR2.png" alt="Logo" className="h-10" />
                                 <div>
-                                    <span class="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-md uppercase mb-1 inline-block">${reg.variedade}</span>
-                                    <h4 class="text-lg font-black text-slate-800 flex items-center gap-2">
-                                        <i data-lucide="box" class="w-4 h-4 text-slate-400"></i>
-                                        Bloco: ${reg.bloco}
-                                    </h4>
-                                </div>
-                                <div class="bg-slate-100 text-slate-500 text-[10px] font-bold px-3 py-1 rounded-full">
-                                    ${reg.data.split('-').reverse().join('/')}
+                                    <h1 className="text-xl font-black text-emerald-800 uppercase leading-none">Fazenda Oasis</h1>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controle de Produção</p>
                                 </div>
                             </div>
-
-                            <div class="grid grid-cols-3 gap-3">
-                                <div class="bg-slate-50 p-2 rounded-xl">
-                                    <p class="text-[8px] font-black text-slate-400 uppercase">Saldo</p>
-                                    <p class="text-sm font-bold text-blue-700">${reg.saldo} mudas</p>
-                                </div>
-                                <div class="bg-slate-50 p-2 rounded-xl">
-                                    <p class="text-[8px] font-black text-slate-400 uppercase">Ciclo</p>
-                                    <p class="text-sm font-bold text-slate-600">${reg.ciclo} dias</p>
-                                </div>
-                                <div class="bg-slate-50 p-2 rounded-xl">
-                                    <p class="text-[8px] font-black text-slate-400 uppercase">Motivo</p>
-                                    <p class="text-sm font-bold text-slate-600 truncate">${reg.motivo}</p>
-                                </div>
+                            <div className="text-right">
+                                <p className="text-2xl font-black text-emerald-600 italic">R$ {relatorios.reduce((acc, curr) => acc + curr.totalGeral, 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                             </div>
                         </div>
+                    </header>
 
-                        <button onclick="remover(${reg.id})" class="text-slate-200 hover:text-red-500 transition-colors bg-transparent border-none cursor-pointer p-2">
-                            <i data-lucide="trash-2" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-                `;
-            }).join('');
-            
-            lucide.createIcons();
-            atualizarStats(sumPerda, sumSaldo, sumTotal);
-        }
+                    <main className="max-w-7xl mx-auto w-full p-6 flex flex-col lg:flex-row gap-8">
+                        {/* FORMULÁRIO */}
+                        <div className="lg:w-[420px] no-print">
+                            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-[2.5rem] shadow-xl space-y-6 sticky top-6 border border-slate-100">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="col-span-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase">Bloco / Talhão</label>
+                                        <input required name="bloco" value={formData.bloco} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-sm" placeholder="Ex: Bloco 01" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase">Cultura</label>
+                                        <input required name="ciclo" value={formData.ciclo} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-sm" placeholder="Ex: Alface" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase">Dias Ciclo</label>
+                                        <input type="number" required name="diasCiclo" value={formData.diasCiclo} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-sm font-bold" />
+                                    </div>
+                                </div>
 
-        function atualizarStats(p, s, t) {
-            document.getElementById('stat-perdas').innerText = p.toLocaleString();
-            document.getElementById('stat-saldo').innerText = s.toLocaleString();
-            const taxa = t > 0 ? ((p / t) * 100).toFixed(1) : 0;
-            document.getElementById('stat-taxa').innerText = `${taxa}%`;
-        }
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase">Transp. (un)</label>
+                                        <input type="text" name="totalTransplantado" value={formData.totalTransplantado} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-sm font-bold" placeholder="0" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-emerald-600 uppercase">Colhido (un)</label>
+                                        <input type="text" name="totalColhido" value={formData.totalColhido} onChange={handleChange} className="w-full bg-emerald-50 border border-emerald-100 p-2.5 rounded-xl text-sm font-bold text-emerald-700" placeholder="0" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase">Total KG</label>
+                                        <input type="text" name="totalKg" value={formData.totalKg} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-sm font-bold" placeholder="0" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-emerald-600 uppercase">Preço Venda/KG</label>
+                                        <input type="number" step="0.01" name="valorPorKg" value={formData.valorPorKg} onChange={handleChange} className="w-full bg-emerald-50 border border-emerald-100 p-2.5 rounded-xl text-sm font-bold" placeholder="R$ 0,00" />
+                                    </div>
+                                </div>
 
-        function remover(id) {
-            if(!confirm('Deseja eliminar este registo?')) return;
-            let db = JSON.parse(localStorage.getItem(DB_KEY)) || [];
-            db = db.filter(x => x.id !== id);
-            localStorage.setItem(DB_KEY, JSON.stringify(db));
-            renderizar();
-        }
+                                {/* IRRIGAÇÃO */}
+                                <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 space-y-3">
+                                    <h3 className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-2"><Icon name="droplets" className="w-3 h-3" /> Irrigação</h3>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div>
+                                            <label className="text-[8px] font-black text-blue-400 uppercase">Vol Total</label>
+                                            <input type="text" name="volumeTotal" value={formData.volumeTotal} onChange={handleChange} className="w-full bg-white border border-blue-100 p-2 rounded-lg text-xs" />
+                                        </div>
+                                        <div>
+                                            <label className="text-[8px] font-black text-blue-400 uppercase">L/Planta</label>
+                                            <input name="ltrsPlanta" value={formData.ltrsPlanta} onChange={handleChange} className="w-full bg-white border border-blue-100 p-2 rounded-lg text-xs" />
+                                        </div>
+                                        <div>
+                                            <label className="text-[8px] font-black text-blue-400 uppercase">L/Dia</label>
+                                            <input name="ltrsDia" value={formData.ltrsDia} onChange={handleChange} className="w-full bg-white border border-blue-100 p-2 rounded-lg text-xs" />
+                                        </div>
+                                    </div>
+                                </div>
 
-        async function exportarRelatorio(tipo) {
-            const area = document.getElementById('export-area');
-            const canvas = await html2canvas(area, { scale: 2, backgroundColor: '#f1f5f9' });
-            const imgData = canvas.toDataURL('image/png');
-            const name = `relatorio-sitio-pedra-grande-${new Date().getTime()}`;
+                                {/* Custos */}
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black text-slate-500 uppercase">Insumos</span><button type="button" onClick={adicionarInsumo} className="text-emerald-600 hover:bg-emerald-50 p-1 rounded"><Icon name="plus" className="w-4 h-4" /></button></div>
+                                        {formData.custosInsumos.map((c, i) => (
+                                            <div key={i} className="flex gap-2">
+                                                <input placeholder="Ex: Adubo" name="descricao" value={c.descricao} onChange={(e) => handleCustoInsumoChange(i, e)} className="flex-grow bg-white border border-slate-200 p-2 rounded-lg text-xs" />
+                                                <input type="text" placeholder="R$" name="valor" value={c.valor} onChange={(e) => handleCustoInsumoChange(i, e)} className="w-20 bg-white border border-slate-200 p-2 rounded-lg text-xs font-bold" />
+                                                {formData.custosInsumos.length > 1 && <button type="button" onClick={() => removerInsumo(i)} className="text-rose-400"><Icon name="x" className="w-3 h-3" /></button>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black text-slate-500 uppercase">Operacionais</span><button type="button" onClick={adicionarOperacional} className="text-blue-600 hover:bg-blue-50 p-1 rounded"><Icon name="plus" className="w-4 h-4" /></button></div>
+                                        {formData.custosOperacionais.map((o, i) => (
+                                            <div key={i} className="flex gap-2">
+                                                <select name="categoria" value={o.categoria} onChange={(e) => handleOperacionalChange(i, e)} className="flex-grow bg-white border border-slate-200 p-2 rounded-lg text-xs">
+                                                    <option value="">Selecione...</option>
+                                                    {categoriasOperacionais.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                                </select>
+                                                <input type="text" placeholder="R$" name="valor" value={o.valor} onChange={(e) => handleOperacionalChange(i, e)} className="w-20 bg-white border border-slate-200 p-2 rounded-lg text-xs font-bold" />
+                                                {formData.custosOperacionais.length > 1 && <button type="button" onClick={() => removerOperacional(i)} className="text-rose-400"><Icon name="x" className="w-3 h-3" /></button>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
 
-            if(tipo === 'png') {
-                const link = document.createElement('a');
-                link.download = `${name}.png`;
-                link.href = imgData;
-                link.click();
-            } else {
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const width = pdf.internal.pageSize.getWidth();
-                const height = (canvas.height * width) / canvas.width;
-                pdf.addImage(imgData, 'PNG', 0, 10, width, height);
-                pdf.save(`${name}.pdf`);
-            }
-        }
+                                <button type="submit" className="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                                    <Icon name="save" className="w-4 h-4" /> Salvar Lançamento
+                                </button>
+                            </form>
+                        </div>
+
+                        {/* HISTÓRICO */}
+                        <div className="flex-grow">
+                            <div className="flex justify-between items-center mb-6 no-print">
+                                <h2 className="text-xl font-black text-slate-800">Histórico Oasis</h2>
+                                <div className="flex gap-2">
+                                    <button onClick={exportAsImage} className="bg-white border p-3 rounded-xl text-[10px] font-black uppercase flex items-center gap-2"><Icon name="image" className="w-4 h-4" /> JPEG</button>
+                                    <button onClick={exportAsPDF} className="bg-emerald-600 text-white p-3 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 shadow-lg"><Icon name="file-text" className="w-4 h-4" /> PDF</button>
+                                </div>
+                            </div>
+
+                            <div ref={reportRef} className="space-y-6">
+                                {isExporting && (
+                                    <div className="bg-white p-10 rounded-3xl border-b-8 border-emerald-600 flex justify-between items-center mb-8">
+                                        <div className="flex items-center gap-6">
+                                            <img src="https://i.imgur.com/qsYPvR2.png" className="h-16" />
+                                            <div>
+                                                <h1 className="text-3xl font-black text-emerald-800 uppercase italic">Fazenda Oasis</h1>
+                                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Relatório Técnico de Produção</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black text-slate-300 uppercase">Exportado em</p>
+                                            <p className="text-xl font-black text-slate-700">{new Date().toLocaleDateString('pt-BR')}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {relatorios.length === 0 && !isExporting && (
+                                    <div className="bg-white p-20 rounded-[2.5rem] text-center border-2 border-dashed border-slate-200">
+                                        <Icon name="sprout" className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Nenhum dado lançado ainda</p>
+                                    </div>
+                                )}
+
+                                {relatorios.map(rel => (
+                                    <div key={rel.id} className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm relative overflow-hidden mb-8">
+                                        <div className="absolute left-0 top-0 bottom-0 w-2 bg-emerald-500"></div>
+                                        
+                                        <div className="flex flex-col md:flex-row justify-between mb-8 gap-6">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="bg-emerald-100 text-emerald-700 text-[9px] font-black px-2 py-0.5 rounded uppercase">{rel.bloco}</span>
+                                                    <span className="text-[9px] font-black text-slate-300 uppercase">{rel.dataRegistro}</span>
+                                                </div>
+                                                <h3 className="text-4xl font-black text-slate-800 italic uppercase leading-tight">{rel.ciclo}</h3>
+                                                <div className="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-bold text-slate-400 uppercase mt-2">
+                                                    <span className="bg-slate-50 px-2 py-1 rounded">Ciclo: {rel.diasCiclo} dias</span>
+                                                    <span className="bg-slate-50 px-2 py-1 rounded">Produção: {rel.totalKg.toLocaleString('pt-BR')} KG</span>
+                                                    <span className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded">Méd: {rel.mediaKg} KG/Pl</span>
+                                                </div>
+                                            </div>
+                                            <div className="text-right flex flex-col justify-center">
+                                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Custo Total Ciclo</p>
+                                                <p className="text-5xl font-black text-emerald-600 italic leading-none">R$ {rel.totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                                                
+                                                <div className="mt-3 flex flex-col gap-1 items-end">
+                                                    {rel.valorPorKg > 0 && (
+                                                        <div className="bg-emerald-50 text-emerald-600 text-[10px] font-black px-3 py-1 rounded-full border border-emerald-100 uppercase">
+                                                            Venda/KG: R$ {rel.valorPorKg.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Irrigação no Card */}
+                                        <div className="grid grid-cols-3 gap-4 mb-8 p-4 bg-blue-50/30 rounded-2xl border border-blue-100/50">
+                                            <div className="text-center border-r border-blue-100 last:border-0">
+                                                <p className="text-[8px] font-black text-blue-400 uppercase">Vol Total</p>
+                                                <p className="text-sm font-black text-blue-800 leading-none">{rel.volumeTotal || '---'}</p>
+                                            </div>
+                                            <div className="text-center border-r border-blue-100 last:border-0">
+                                                <p className="text-[8px] font-black text-blue-400 uppercase">Ltrs/Planta</p>
+                                                <p className="text-sm font-black text-blue-800 leading-none">{rel.ltrsPlanta || '---'}</p>
+                                            </div>
+                                            <div className="text-center border-r border-blue-100 last:border-0">
+                                                <p className="text-[8px] font-black text-blue-400 uppercase">Ltrs/Dia</p>
+                                                <p className="text-sm font-black text-blue-800 leading-none">{rel.ltrsDia || '---'}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Listagem de Custos Detalhada */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                            <div className="space-y-4">
+                                                <h4 className="text-[10px] font-black text-emerald-700 uppercase border-b border-emerald-100 pb-1 flex justify-between">
+                                                    <span>Insumos</span>
+                                                    <span>R$ {rel.totalInsumos.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                                                </h4>
+                                                <ul className="space-y-2">
+                                                    {rel.custosInsumos.map((item, idx) => (
+                                                        <li key={idx} className="flex justify-between text-xs border-b border-slate-50 pb-1 last:border-0">
+                                                            <span className="text-slate-500 font-medium capitalize">{item.descricao}</span>
+                                                            <span className="font-black text-slate-700">R$ {item.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <h4 className="text-[10px] font-black text-blue-700 uppercase border-b border-blue-100 pb-1 flex justify-between">
+                                                    <span>Operacional</span>
+                                                    <span>R$ {rel.totalOperacional.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                                                </h4>
+                                                <ul className="space-y-2">
+                                                    {rel.custosOperacionais.map((item, idx) => (
+                                                        <li key={idx} className="flex justify-between text-xs border-b border-slate-50 pb-1 last:border-0">
+                                                            <span className="text-slate-500 font-medium">{item.categoria}</span>
+                                                            <span className="font-black text-slate-700">R$ {item.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-10 pt-6 border-t border-slate-50 flex items-center justify-between gap-8">
+                                            <div className="flex-grow">
+                                                <div className="flex justify-between text-[10px] font-black text-slate-300 uppercase mb-2">
+                                                    <span>Aproveitamento de Colheita</span>
+                                                    <span className="text-emerald-500">{Math.round((rel.totalColhido/rel.totalTransplantado)*100)}%</span>
+                                                </div>
+                                                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden shadow-inner">
+                                                    <div className="bg-emerald-500 h-full transition-all duration-1000" style={{width: `${Math.min((rel.totalColhido/rel.totalTransplantado)*100, 100)}%`}}></div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase">Resultado</p>
+                                                <p className="text-sm font-black text-emerald-700 italic">{rel.totalColhido.toLocaleString('pt-BR')} / {rel.totalTransplantado.toLocaleString('pt-BR')} UN</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </main>
+
+                    {isExporting && (
+                        <div className="fixed inset-0 bg-emerald-950/50 backdrop-blur-md flex items-center justify-center z-50">
+                            <div className="bg-white p-12 rounded-[3rem] shadow-2xl text-center space-y-4">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
+                                <p className="text-xs font-black text-emerald-900 uppercase tracking-widest">Finalizando Documento...</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
